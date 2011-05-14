@@ -1,8 +1,6 @@
-A Stomp client written in Erlang
-================================
-
-Usage sample (connecting with Active MQ stomp):
-----------------------------------------------  
+#A Stomp client written in Erlang  
+  
+##Usage sample (connecting with Active MQ stomp):  
   
 >%Create a message handling function:  
 
@@ -18,5 +16,4 @@ Pid = stomp_client:start("localhost",61613,"","",Fun),
 
 stomp_client:subscribe_topic("TestTopic",Pid).  
   
-You should now get a printout on the console every time a message arrives on the topic you've subscribed to.
-------------------------------------------------------------------------------------------------------------
+####You should now get a printout on the console every time a message arrives on the topic you've subscribed to.
