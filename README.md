@@ -10,7 +10,7 @@ Fun = fun(Msg) ->
   
 >%Start the client and keep it's Pid:  
   
-Pid = stomp_client:start("localhost",61613,"","",Fun),  
+{ok,Pid} = stomp_client:start("localhost",61613,"","",Fun),  
   
 >%subscribe to a topic or a queue:  
 
