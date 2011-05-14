@@ -1,5 +1,5 @@
 A Stomp client written in Erlang
-
+================================
 
 Usage sample (connecting with Active MQ stomp):
 
