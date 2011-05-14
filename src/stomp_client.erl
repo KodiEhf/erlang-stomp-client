@@ -11,7 +11,9 @@
 -behaviour(gen_server).
 
 %% API
--export([start/5,stop/1,subscribe_topic/2,subscribe_queue/2,unsubscribe_topic/2,unsubscribe_queue/2, test/0]).
+-export([start/5,stop/1,subscribe_topic/3,subscribe_queue/3,
+	 unsubscribe_topic/2,unsubscribe_queue/2,
+	 ack/2, ack/3, send_topic/4, send_queue/4,test/0,test2/0]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -44,17 +46,30 @@ start(Host,Port,User,Pass,MessageFunc) ->
 stop(Pid) ->
     gen_server:cast(Pid,{stop}).
     
-subscribe_topic(Topic,Pid) ->
-    gen_server:cast(Pid, {subscribe,topic,Topic}).
+subscribe_topic(Topic,Options,Pid) ->
+    gen_server:cast(Pid, {subscribe,topic,Topic,Options}).
 
-subscribe_queue(Queue,Pid) ->
-    gen_server:cast(Pid, {subscribe,queue,Queue}).
+subscribe_queue(Queue,Options,Pid) ->
+    gen_server:cast(Pid, {subscribe,queue,Queue,Options}).
 
 unsubscribe_topic(Topic,Pid) ->
     gen_server:cast(Pid, {unsubscribe,topic,Topic}).
 
 unsubscribe_queue(Queue,Pid) ->
     gen_server:cast(Pid, {unsubscribe,queue,Queue}).
+
+ack(Message,Pid) ->
+    gen_server:cast(Pid,{ack, Message}).
+
+ack(Message, TransactionId,Pid) ->
+    gen_server:cast(Pid, {ack, Message,TransactionId}).
+
+send_topic(Topic, Message,Options,Pid) -> 
+    io:format("Sending to topic~p~n",[Topic]),
+    gen_server:cast(Pid, {send, topic, {Topic,Message,Options}}).
+
+send_queue(Queue, Message,Options,Pid) ->
+    gen_server:cast(Pid, {send, queue, {Queue,Message,Options}}).
 
 start_link(Host,Port,User,Pass,MessageFunc) ->
     gen_server:start_link(?MODULE, [{Host,Port,User,Pass,MessageFunc}], []).
@@ -76,33 +91,72 @@ handle_call(_Request, _From, State) ->
     Reply = ok,
     {reply, Reply, State}.
 
-handle_cast({subscribe, topic ,Topic}, #state{socket = Sock} = State) ->
-    Message = lists:append(["SUBSCRIBE", "\ndestination: ", "/topic/"++Topic,["\nack:auto"] ,"\n\n", [0]]),
+handle_cast({subscribe, topic ,Topic, Options}, #state{socket = Sock} = State) ->
+    Message = lists:append(["SUBSCRIBE", "\ndestination: ", "/topic/"++Topic,format_options(Options) ,"\n\n", [0]]),
     gen_tcp:send(Sock,Message),   
     inet:setopts(Sock,[{active,once}]),
     {noreply, State#state{subscriptions = [State#state.subscriptions|Topic]}};
 
-handle_cast({subscribe, queue ,Queue}, #state{socket = Sock} = State) ->
-    Message = lists:append(["SUBSCRIBE", "\ndestination: ", "/queue/"++Queue,["\nack:auto"] ,"\n\n", [0]]),
+handle_cast({subscribe, queue ,Queue,Options}, #state{socket = Sock} = State) ->
+    Message = lists:append(["SUBSCRIBE", "\ndestination: ", "/queue/"++Queue,format_options(Options) ,"\n\n", [0]]),
     gen_tcp:send(Sock,Message),   
     inet:setopts(Sock,[{active,once}]),
     {noreply, State#state{subscriptions = [State#state.subscriptions|Queue]}};
 
 handle_cast({unsubscribe, topic ,Topic}, #state{socket = Sock} = State) ->
-    Message=lists:append(["UNSUBSCRIBE", "\ndestination: ", Topic, "\n\n", [0]]),
+    Message=lists:append(["UNSUBSCRIBE", "\ndestination: ", "/topic/"++Topic, "\n\n", [0]]),
     gen_tcp:send(Sock,Message),   
     inet:setopts(Sock,[{active,once}]),
     {noreply, State#state{subscriptions = [State#state.subscriptions|Topic]}};
 
 handle_cast({unsubscribe, queue ,Queue}, #state{socket = Sock} = State) ->
-    Message=lists:append(["UNSUBSCRIBE", "\ndestination: ", Queue, "\n\n", [0]]),
+    Message=lists:append(["UNSUBSCRIBE", "\ndestination: ", "/queue/"++Queue, "\n\n", [0]]),
     gen_tcp:send(Sock,Message),   
     inet:setopts(Sock,[{active,once}]),
     {noreply, State#state{subscriptions = [State#state.subscriptions|Queue]}};
 
 handle_cast(stop,#state{socket =Sock } = State) ->
+    Message = lists:append(["DISCONNECT","\n\n",[0]]),
+    gen_tcp:send(Sock,Message),
+    inet:setopts(Sock,[{active,once}]),
     gen_tcp:close(Sock),
     {stop, normal,State};
+
+handle_cast({ack, Message},#state{socket = Socket} = State) ->
+    MessageId = case Message of
+		    [_Type, {header,Headers}, _Body] ->
+			proplists:get_value("message-id",Headers);
+		    _ ->
+			Message
+		end,
+    Msg = lists:append(["ACK", "\nmessage-id:",MessageId,"\n\n",[0]]),
+    gen_tcp:send(Socket,Msg),
+    inet:setopts(Socket,[{active,once}]),
+    {noreply,State};
+
+handle_cast({ack, Message,TransactionId},#state{socket = Socket} = State) ->
+    MessageId = case Message of
+		    [_Type, {header,Headers}, _Body] ->
+			proplists:get_value("message-id",Headers);
+		    _ ->
+			Message
+		end,
+    Msg = lists:append(["ACK", "\nmessage-id:",MessageId,"\ntransaction:",TransactionId,"\n\n",[0]]),
+    gen_tcp:send(Socket,Msg),
+    inet:setopts(Socket,[{active,once}]),
+    {noreply,State};
+
+handle_cast({send, topic, {Topic, Message,Options}}, #state{socket = Socket} = State) ->
+    Msg = lists:append(["SEND","\ndestination:","/topic/"++Topic, format_options(Options),"\n\n",Message,[0]]),
+    gen_tcp:send(Socket,Msg),
+    inet:setopts(Socket,[{active,once}]),    
+    {noreply,State};
+
+handle_cast({send, queue, {Queue, Message,Options}},#state{socket = Socket} = State) ->
+    Msg = lists:append(["SEND","\ndestination:","/queue/"++Queue, format_options(Options),"\n\n",Message,[0]]),
+    gen_tcp:send(Socket,Msg),
+    inet:setopts(Socket,[{active,once}]),    
+    {noreply,State};
 
 handle_cast(_Msg, State) ->    
     {noreply, State}.
@@ -176,6 +230,18 @@ parse([First|Rest], #parser_state{got_type = true, key = Key, current = Current}
 parse([First|Rest], #parser_state{last_char = Last, current = Current} = State) when Last =/= undefined ->
     parse(Rest, State#parser_state{last_char = First, current = Current++[First]}).
 
+format_options(Options) ->
+    lists:foldl(fun(X,Acc) -> 
+			case X of
+			    [] ->
+				Acc;
+			    {Name, Value} ->
+				Acc++["\n"++Name++":"++Value];
+			    E ->
+				throw("Error: invalid options format: "++E) 
+			end
+		end,[],Options).
+
 test() ->
     F = frame(["MESSAGE\n"++
 "message-id:ID:staging-53630-634408209863540308-1:1:1:1:2970112"++[10]++
@@ -195,4 +261,3 @@ test() ->
     lists:foreach(fun(X) ->
 			  parse(X,#parser_state{})
 		  end,F#framer_state.messages).
-
