@@ -21,3 +21,5 @@ stomp_client:subscribe_topic("TestTopic",[],Pid).
 stomp_client:send_topic("TestTopic","This is a test message",[],Pid).  
   
 ####You should now get a printout on the console every time a message arrives on the topic you've subscribed to.
+  
+#####Check the Wiki for more info on the API.
