@@ -4,10 +4,10 @@ A Stomp client written in Erlang
 Usage sample (connecting with Active MQ stomp):
 ----------------------------------------------
 
-%Create a message handling function:
-  Fun = fun(Msg) ->
-              io:format("Message ~p~n",[Msg])
-         end,
+%Create a message handling function:</br>
+  Fun = fun(Msg) -> </br>
+              io:format("Message ~p~n",[Msg])</br>
+         end,</br>
 
 %Start the client and keep it's Pid:
 
