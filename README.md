@@ -20,6 +20,6 @@
 
 `stomp_client:send_topic("TestTopic","This is a test message",[],Pid).`  
   
-####You should now get a printout on the console every time a message arrives on the topic you've subscribed to.
+>You should now get a printout on the console every time a message arrives on the topic you've subscribed to.
   
-#####Check the Wiki for more info on the API.
+####Check the [Wiki](https://github.com/KodiEhf/erlang-stomp-client/wiki/erlang-stomp-client-wiki) for more info or go straight to the the [API docs](http://kodiehf.github.com/erlang-stomp-client/).
