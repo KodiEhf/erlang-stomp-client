@@ -170,8 +170,8 @@ handle_info(_Info, #state{socket = Sock, onmessage = Func} = State) ->
 		       lists:foreach(fun(X) ->		
 					     Msg = parse(X, #parser_state{}),
 					     Func(Msg)
-				     end,NewState1#framer_state.messages),		       
-		   #framer_state{current = NewState1#framer_state.current}    
+				     end,NewState1#framer_state.messages),		   
+		       #framer_state{current = NewState1#framer_state.current}    
 	       end,    
     inet:setopts(Sock,[{active,once}]),
     {noreply, State#state{framer = NewState}}.
@@ -206,13 +206,19 @@ parse([First|Rest], #parser_state{last_char = undefined} = State) ->
 %Command
 parse([10|[]], #parser_state{last_char = Last, header = Header, message = Message}) when Last =:= 10 ->
     Message++[{header,Header}];
-%%Start of Body (end of parse
+%%Start of Body (end of parse)
 parse([10|Rest], #parser_state{last_char = Last, header = Header, message = Message}) when Last =:= 10 ->
     Body = lists:reverse(tl(lists:reverse(Rest))),
     Message++[{header,Header},{body,Body}];  
 %%Get message type
 parse([10|Rest], #parser_state{got_type = false, message = Message, current = Current} = State) ->
-    parse(Rest,State#parser_state{message = Message++[{type,Current}], current = [], got_type = true, last_char = 10});
+    Type = case Current of
+	       [10|T] ->
+		   T;
+	       _ ->
+		   Current
+	   end,
+    parse(Rest,State#parser_state{message = Message++[{type,Type}], current = [], got_type = true, last_char = 10});
 %%Key Value Header
 parse([10|Rest], #parser_state{key = Key, current = Value, header = Header} = State) when length(Key) =/= 0 ->
     parse(Rest,State#parser_state{last_char = 10, current =[], header = Header ++ [{Key,Value}], key = [] });  
@@ -243,21 +249,25 @@ format_options(Options) ->
 		end,[],Options).
 
 test() ->
-    F = frame(["MESSAGE\n"++
+    Msg = "CONNECTED\n"++
+"session:ID:id:ID"++
+"\n\n"++[0]++
+"MESSAGE\n"++
 "message-id:ID:staging-53630-634408209863540308-1:1:1:1:2970112"++[10]++
 "destination:/topic/MARKET.DATA\n"++
 "timestamp:1305323578525"++[10]++
 "expires:0\n"++
 "content-length:814\n"++
 "priority:4\n\n"++
-"TEST"++[0],"MESSAGE\n"++
+"TEST"++[0]++"MESSAGE\n"++
 "message-id:ID:staging-53630-634408209863540308-1:1:1:1:2970112"++[10]++
 "destination:/topic/MARKET.DATA\n"++
 "timestamp:1305323578525"++[10]++
 "expires:0\n"++
 "content-length:814\n"++
 "priority:4\n\n"++
-"TEST"++[0]],#framer_state{}),
+"TEST"++[0],
+    F = frame(Msg,#framer_state{}),
     lists:foreach(fun(X) ->
-			  parse(X,#parser_state{})
+			  io:format("~p~n",[parse(X,#parser_state{})])
 		  end,F#framer_state.messages).
