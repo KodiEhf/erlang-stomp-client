@@ -1,1 +1,7 @@
 ebin/*
+doc/*.html
+doc/*.css
+doc/edoc-info
+doc/*.png
+*.beam
+.eunit/*

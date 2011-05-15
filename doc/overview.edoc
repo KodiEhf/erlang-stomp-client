@@ -1,0 +1,35 @@
+** this is the overview.doc file for the application 'erlang-stomp-client' **
+@author nisbus <nisbus@kodiak.is>
+@author Omar Yasin <omarkj@kodiak.is>
+@copyright (C) 2011, Kodi ehf (http://kodiak.is)
+@version 1.0
+@title A stomp client written in Erlang
+@doc
+== Overview ==
+
+<p> The basics are to start the client with a hostname,port, user,pass and a message handling function</p>
+<p>Then subscribe and/or send to topics or queues</p>  
+  
+== Usage sample ==
+<p>%Create a message handling function:</p> 
+<p><br><code>Fun = fun(Msg) -&gt;</code></br>
+   <br>  <code>  io:format("Message ~p~n",[Msg])</code></br>
+   <br><code>end,</code></br> 
+</p> 
+
+<p>%Start the client and keep it's Pid:  </p> 
+<p>
+<code>{ok,Pid} = stomp_client:start("localhost",61613,"","",Fun),</code>  
+</p> 
+
+<p>%subscribe to a topic or a queue:  </p> 
+<p>
+<code>stomp_client:subscribe_topic("TestTopic",[],Pid).</code>  
+</p> 
+<p>%send a message to the TestTopic:</p> 
+<p>
+<code>stomp_client:send_topic("TestTopic","This is a test message",[],Pid).</code>
+</p> 
+ 
+<h5>You should now get a printout on the console every time a message arrives on the TestTopic you've subscribed to.</h5> 
+@end
