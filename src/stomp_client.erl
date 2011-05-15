@@ -21,7 +21,13 @@
 
 -define(SERVER, ?MODULE). 
 -include("stomp_parser.hrl").
--record(state, {framer, socket, subscriptions,onmessage}).
+-include_lib("kernel/include/inet.hrl").
+-record(state, {
+	  framer :: #framer_state{},
+	  socket :: inet:socket(),
+	  subscriptions :: [string()],
+	  onmessage :: fun()
+	 }).
 
 
 %%%===================================================================

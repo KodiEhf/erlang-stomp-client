@@ -1,19 +1,16 @@
 %%%-------------------------------------------------------------------
+%%% @author nisbus <nisbus@kodiak.is>
+%%% @author Omar Yasin <omarkj@kodiak.is>
 %%% @copyright (C) 2011, Kodi ehf (http://kodiak.is)
 %%% @doc
 %%% A stomp client gen_server for Erlang
 %%% @end
 %%% Created : 13 May 2011 by nisbus
 %%%-------------------------------------------------------------------
-
 -module(stomp_parser).
--author('nisbus@kodiak.is').
--author('omar@kodiak.is').
 -include("stomp_parser.hrl").
 -export([frame/1, parse/1]).
 -export([test/0]).
-
-
 
 %% API
 -spec frame(Buffer::string()) -> FramedMessage::#framer_state{}.
