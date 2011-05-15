@@ -13,7 +13,7 @@
 %% API
 -export([start/5,stop/1,subscribe_topic/3,subscribe_queue/3,
 	 unsubscribe_topic/2,unsubscribe_queue/2,
-	 ack/2, ack/3, send_topic/4, send_queue/4,test/0,test2/0]).
+	 ack/2, ack/3, send_topic/4, send_queue/4,test/0]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
