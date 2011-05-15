@@ -1,0 +1,3 @@
+{application,stomp_client}.
+{packages,[]}.
+{modules,[stomp_client]}.
