@@ -1,4 +1,6 @@
 ebin/*
+*~
+deps/
 doc/*.html
 doc/*.css
 doc/edoc-info
