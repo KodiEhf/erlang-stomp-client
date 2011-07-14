@@ -195,18 +195,15 @@ handle_cast(_Msg, State) ->
     {noreply, State}.
 
 %%% @hidden
-handle_info(_Info, #state{socket = Sock, onmessage = Func} = State) ->
-    {_,_,Data} = _Info,    
-    NewState = case frame(Data,State#state.framer) of
-		   #framer_state{messages = []} = N ->
-		       N;
-		   NewState1 ->
-		       lists:foreach(fun(X) ->		
-					     Msg = parse(X, #parser_state{}),
-					     Func(Msg)
-				     end,NewState1#framer_state.messages),		   
-		       #framer_state{current = NewState1#framer_state.current}    
-	       end,    
+handle_info(_Info, #state{socket = Sock, onmessage = Func, framer = Framer} = State) ->
+    {_,_,Data} = _Info,
+    NewState = case Data of
+		   {error, Error} ->
+		       error_logger:error_msg("Cannot connect to STOMP ~p~n", [Error]),
+		       Framer;
+		   _ ->
+		       do_framing(Data, Framer, Func)
+	       end,
     inet:setopts(Sock,[{active,once}]),
     {noreply, State#state{framer = NewState}}.
 
@@ -221,6 +218,18 @@ code_change(_OldVsn, State, _Extra) ->
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
+do_framing(Data, Framer, Func) ->
+    case frame(Data,Framer) of
+	#framer_state{messages = []} = N ->
+	    N;
+	NewState1 ->
+	    lists:foreach(fun(X) ->		
+				  Msg = parse(X, #parser_state{}),
+				  Func(Msg)
+			  end,NewState1#framer_state.messages),		   
+	    #framer_state{current = NewState1#framer_state.current}    
+    end.    
+
 frame([],State) ->
     State;
 frame([First|Rest],#framer_state{current = [], messages = []}) ->
