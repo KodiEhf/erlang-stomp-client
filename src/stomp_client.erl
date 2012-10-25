@@ -116,28 +116,28 @@ handle_call(_Request, _From, State) ->
 
 %%% @hidden
 handle_cast({subscribe, topic ,Topic, Options}, #state{socket = Sock} = State) ->
-    Message = lists:append(["SUBSCRIBE", "\ndestination: ", "/topic/"++Topic,format_options(Options) ,"\n\n", [0]]),
+    Message = lists:append(["SUBSCRIBE", "\ndestination:", "/topic/"++Topic,format_options(Options) ,"\n\n", [0]]),
     gen_tcp:send(Sock,Message),   
     inet:setopts(Sock,[{active,once}]),
     {noreply, State#state{subscriptions = [State#state.subscriptions|Topic]}};
 
 %%% @hidden
 handle_cast({subscribe, queue ,Queue,Options}, #state{socket = Sock} = State) ->
-    Message = lists:append(["SUBSCRIBE", "\ndestination: ", "/queue/"++Queue,format_options(Options) ,"\n\n", [0]]),
+    Message = lists:append(["SUBSCRIBE", "\ndestination:", "/queue/"++Queue,format_options(Options) ,"\n\n", [0]]),
     gen_tcp:send(Sock,Message),   
     inet:setopts(Sock,[{active,once}]),
     {noreply, State#state{subscriptions = [State#state.subscriptions|Queue]}};
 
 %%% @hidden
 handle_cast({unsubscribe, topic ,Topic}, #state{socket = Sock} = State) ->
-    Message=lists:append(["UNSUBSCRIBE", "\ndestination: ", "/topic/"++Topic, "\n\n", [0]]),
+    Message=lists:append(["UNSUBSCRIBE", "\ndestination:", "/topic/"++Topic, "\n\n", [0]]),
     gen_tcp:send(Sock,Message),   
     inet:setopts(Sock,[{active,once}]),
     {noreply, State#state{subscriptions = [State#state.subscriptions|Topic]}};
 
 %%% @hidden
 handle_cast({unsubscribe, queue ,Queue}, #state{socket = Sock} = State) ->
-    Message=lists:append(["UNSUBSCRIBE", "\ndestination: ", "/queue/"++Queue, "\n\n", [0]]),
+    Message=lists:append(["UNSUBSCRIBE", "\ndestination:", "/queue/"++Queue, "\n\n", [0]]),
     gen_tcp:send(Sock,Message),   
     inet:setopts(Sock,[{active,once}]),
     {noreply, State#state{subscriptions = [State#state.subscriptions|Queue]}};
