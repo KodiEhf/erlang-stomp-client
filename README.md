@@ -23,3 +23,8 @@
 `stomp_client:send_topic("TestTopic","This is a test message",[],Pid).`  
   
 >You should now get a printout on the console every time a message arrives on the topic you've subscribed to.
+
+##Update for issue #1
+You could now start the client using start/6 which takes anything as an internal state.
+If you do that you need to change your onmessage function to arity/2 since it will now need to handle the message and the state as input.
+I also added a get_client_state function to query the internal state (note, that this is a blocking call).
