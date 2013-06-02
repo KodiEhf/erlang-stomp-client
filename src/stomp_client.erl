@@ -20,9 +20,10 @@
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
 	 terminate/2, code_change/3]).
 
+-export([start/6, get_client_state/1]).
 -define(SERVER, ?MODULE). 
 
--record(state, {framer, socket, subscriptions,onmessage}).
+-record(state, {framer, socket, subscriptions,onmessage, client_state}).
 -record(framer_state,
 	{
 	  current = [],
@@ -41,8 +42,13 @@
 %%%===================================================================
 %%% API
 %%%===================================================================
+
+-spec start(string(), integer(), string(),string(),fun(),any()) -> {ok,pid}.
+start(Host,Port,User,Pass,MessageFunc, ClientState) ->
+    start_link(Host,Port,User,Pass,MessageFunc,ClientState).
+
 %%% @doc Starts the client
--spec start(string(),integer(),string(),string(),fun()) -> {ok,pid}.		   
+-spec start(string(),integer(),string(),string(),fun()) -> {ok,pid}.
 start(Host,Port,User,Pass,MessageFunc) ->
     start_link(Host,Port,User,Pass,MessageFunc).
 
@@ -91,9 +97,18 @@ send_topic(Topic, Message,Options,Pid) ->
 send_queue(Queue, Message,Options,Pid) ->
     gen_server:cast(Pid, {send, queue, {Queue,Message,Options}}).
 
+%%% @doc request the client state given to the process when starting.
+-spec get_client_state(pid) -> any().
+get_client_state(Pid) ->
+    gen_server:call(Pid, get_client_state).
+
 %%% @hidden
 start_link(Host,Port,User,Pass,MessageFunc) ->
     gen_server:start_link(?MODULE, [{Host,Port,User,Pass,MessageFunc}], []).
+
+%% @hidden
+start_link(Host,Port,User,Pass,MessageFunc,ClientState) ->
+    gen_server:start_link(?MODULE, [{Host,Port,User,Pass,MessageFunc,ClientState}], []).
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -107,7 +122,15 @@ init([{Host,Port,User,Pass,F}]) ->
     {ok, Response}=gen_tcp:recv(Sock, 0),
     State = frame(Response, #framer_state{}),
     inet:setopts(Sock,[{active,once}]),
-    {ok, #state{framer = State, socket = Sock, onmessage = F}}.
+    {ok, #state{framer = State, socket = Sock, onmessage = F}};
+
+init([{Host,Port,User,Pass,F,Cl}]) ->
+    {ok, State} = init([{Host,Port,User,Pass,F}]),
+    {ok, State#state{client_state = Cl}}.
+
+%%% @hidden
+handle_call(get_client_state, _From, #state{client_state = Reply} = State) ->
+    {reply, Reply, State};
 
 %%% @hidden
 handle_call(_Request, _From, State) ->
@@ -195,14 +218,14 @@ handle_cast(_Msg, State) ->
     {noreply, State}.
 
 %%% @hidden
-handle_info(_Info, #state{socket = Sock, onmessage = Func, framer = Framer} = State) ->
+handle_info(_Info, #state{socket = Sock, onmessage = Func, framer = Framer, client_state = Cl} = State) ->
     {_,_,Data} = _Info,
     NewState = case Data of
 		   {error, Error} ->
 		       error_logger:error_msg("Cannot connect to STOMP ~p~n", [Error]),
 		       Framer;
 		   _ ->
-		       do_framing(Data, Framer, Func)
+		       do_framing(Data, Framer, Func, Cl)
 	       end,
     inet:setopts(Sock,[{active,once}]),
     {noreply, State#state{framer = NewState}}.
@@ -218,14 +241,17 @@ code_change(_OldVsn, State, _Extra) ->
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
-do_framing(Data, Framer, Func) ->
+do_framing(Data, Framer, Func, Cl) ->
     case frame(Data,Framer) of
 	#framer_state{messages = []} = N ->
 	    N;
 	NewState1 ->
 	    lists:foreach(fun(X) ->		
 				  Msg = parse(X, #parser_state{}),
-				  Func(Msg)
+				  case Cl of
+				      undefined ->  Func(Msg);
+				      _ -> Func(Msg,Cl)
+				  end
 			  end,NewState1#framer_state.messages),		   
 	    #framer_state{current = NewState1#framer_state.current}    
     end.    
