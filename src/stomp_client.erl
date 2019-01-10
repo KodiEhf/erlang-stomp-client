@@ -43,62 +43,62 @@
 %%% API
 %%%===================================================================
 
--spec start(string(), integer(), string(),string(),fun(),any()) -> {ok,pid}.
+-spec start(string(), integer(), string(),string(),fun(),any()) -> {ok,pid()}.
 start(Host,Port,User,Pass,MessageFunc, ClientState) ->
     start_link(Host,Port,User,Pass,MessageFunc,ClientState).
 
 %%% @doc Starts the client
--spec start(string(),integer(),string(),string(),fun()) -> {ok,pid}.
+-spec start(string(),integer(),string(),string(),fun()) -> {ok,pid()}.
 start(Host,Port,User,Pass,MessageFunc) ->
     start_link(Host,Port,User,Pass,MessageFunc).
 
 %%% @doc Stops the client
--spec stop(pid) -> ok.
+-spec stop(pid()) -> ok.
 stop(Pid) ->
     gen_server:cast(Pid,{stop}).
     
 %%% @doc Subscribe to a single topic
--spec subscribe_topic(string(),[tuple(string(),string())],pid) -> ok.
+-spec subscribe_topic(string(),[{string(),string()}],pid()) -> ok.
 subscribe_topic(Topic,Options,Pid) ->
     gen_server:cast(Pid, {subscribe,topic,Topic,Options}).
 
 %%% @doc Subscribe to a single queue
--spec subscribe_queue(string(),[tuple(string(),string())],pid) -> ok.
+-spec subscribe_queue(string(),[{string(),string()}],pid()) -> ok.
 subscribe_queue(Queue,Options,Pid) ->
     gen_server:cast(Pid, {subscribe,queue,Queue,Options}).
 
 %%% @doc unsubscribe from a single topic
--spec unsubscribe_topic(string(),pid) -> ok.
+-spec unsubscribe_topic(string(),pid()) -> ok.
 unsubscribe_topic(Topic,Pid) ->
     gen_server:cast(Pid, {unsubscribe,topic,Topic}).
 
 %%% @doc unsubscribe from a single queue
--spec unsubscribe_queue(string(),pid) -> ok.
+-spec unsubscribe_queue(string(),pid()) -> ok.
 unsubscribe_queue(Queue,Pid) ->
     gen_server:cast(Pid, {unsubscribe,queue,Queue}).
 
 %%% @doc ack a message using the message or the message id
--spec ack(string(),pid) -> ok.
+-spec ack(string(),pid()) -> ok.
 ack(Message,Pid) ->
     gen_server:cast(Pid,{ack, Message}).
 
 %%% @doc ack a message from a transaction using the message or the message id and the transaction id
--spec ack(string(),string(),pid) -> ok.
+-spec ack(string(),string(),pid()) -> ok.
 ack(Message, TransactionId,Pid) ->
     gen_server:cast(Pid, {ack, Message,TransactionId}).
 
 %%% @doc send a message to a topic
--spec send_topic(string(),string(),[tuple(string(),string())],pid) -> ok.
+-spec send_topic(string(),string(),[{string(),string()}],pid()) -> ok.
 send_topic(Topic, Message,Options,Pid) -> 
     gen_server:cast(Pid, {send, topic, {Topic,Message,Options}}).
 
 %%% @doc send a message to a queue
--spec send_queue(string(),string(),[tuple(string(),string())],pid) -> ok.
+-spec send_queue(string(),string(),[{string(),string()}],pid()) -> ok.
 send_queue(Queue, Message,Options,Pid) ->
     gen_server:cast(Pid, {send, queue, {Queue,Message,Options}}).
 
 %%% @doc request the client state given to the process when starting.
--spec get_client_state(pid) -> any().
+-spec get_client_state(pid()) -> any().
 get_client_state(Pid) ->
     gen_server:call(Pid, get_client_state).
 
@@ -115,7 +115,8 @@ start_link(Host,Port,User,Pass,MessageFunc,ClientState) ->
 %%%===================================================================
 %%% @hidden
 init([{Host,Port,User,Pass,F}]) ->
-    ClientId = "erlang_stomp_"++binary_to_list(ossp_uuid:make(v4, text)),
+    {uuid, UUID} = zuuid:v4(),
+    ClientId = "erlang_stomp_"++binary_to_list(UUID),
     Message=lists:append(["CONNECT", "\nlogin: ", User, "\npasscode: ", Pass,"\nclient-id:",ClientId, "\n\n", [0]]),
     {ok,Sock}=gen_tcp:connect(Host,Port,[{active, false}]),
     gen_tcp:send(Sock,Message),    
