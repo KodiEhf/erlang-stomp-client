@@ -1,6 +1,6 @@
 #A Stomp client written in Erlang  
   
-####Check the [Wiki](https://github.com/KodiEhf/erlang-stomp-client/wiki/erlang-stomp-client-wiki) for more info or go straight to the the [API docs](http://kodiehf.github.com/erlang-stomp-client/).  
+####Check the [Wiki](https://github.com/KodiEhf/erlang-stomp-client/wiki/erlang-stomp-client-wiki) for more info or go straight to the [API docs](http://kodiehf.github.com/erlang-stomp-client/).  
   
 ##Usage sample:
   
